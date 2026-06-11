@@ -43,6 +43,7 @@ export type MachineEvent =
   | { type: 'SPEECH_START' }
   | { type: 'SPEECH_END' }
   | { type: 'SPEECH_RESUMED' }
+  | { type: 'SPEECH_MISFIRE' }
   | { type: 'COMMIT' }
   | { type: 'FORCE_END_TURN' }
   | { type: 'FIRST_AUDIO' }
@@ -152,6 +153,13 @@ export function reduce(state: MachineState, event: MachineEvent): ReduceResult {
       // Falszywa pauza — okno anulowania DOMYKANIE -> SLUCHAM (sklejanie segmentu).
       return phase === 'DOMYKANIE'
         ? to(state, 'SLUCHAM', { speaking: true }, [{ type: 'LOG', event: 'speech_resumed' }])
+        : stay(state);
+
+    case 'SPEECH_MISFIRE':
+      // Mowa krotsza niz minSpeech (stukniecie, kaszlniecie) — wracamy do nasluchu
+      // bez tlumaczenia; segment dostaje flage FILTERED w kontrolerze.
+      return (phase === 'SLUCHAM' && ctx.speaking) || phase === 'DOMYKANIE'
+        ? to(state, 'SLUCHAM', { speaking: false }, [{ type: 'LOG', event: 'speech_misfire' }])
         : stay(state);
 
     case 'COMMIT':

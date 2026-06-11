@@ -103,6 +103,31 @@ describe('okno anulowania DOMYKANIE -> SLUCHAM (falszywa pauza)', () => {
   });
 });
 
+describe('SPEECH_MISFIRE (mowa za krotka)', () => {
+  it('w DOMYKANIE wraca do SLUCHAM bez tlumaczenia', () => {
+    const { state } = run([
+      ...TO_LISTENING,
+      { type: 'SPEECH_START' },
+      { type: 'SPEECH_END' },
+      { type: 'SPEECH_MISFIRE' },
+    ]);
+    expect(state.phase).toBe('SLUCHAM');
+    expect(state.ctx.speaking).toBe(false);
+    expect(state.ctx.inFlight).toBeNull();
+  });
+
+  it('w SLUCHAM podczas mowy konczy "mowe" bez segmentu', () => {
+    const { state } = run([...TO_LISTENING, { type: 'SPEECH_START' }, { type: 'SPEECH_MISFIRE' }]);
+    expect(state.phase).toBe('SLUCHAM');
+    expect(state.ctx.speaking).toBe(false);
+  });
+
+  it('ignorowany w TLUMACZE (segment juz zacommitowany)', () => {
+    const { state } = run([...TO_TRANSLATING, { type: 'SPEECH_MISFIRE' }]);
+    expect(state.phase).toBe('TLUMACZE');
+  });
+});
+
 describe('FORCE_END_TURN', () => {
   it('forsuje DOMYKANIE z efektem FORCE_COMMIT gdy mowca mowi', () => {
     const { state, effects } = run([...TO_LISTENING, { type: 'SPEECH_START' }, { type: 'FORCE_END_TURN' }]);
