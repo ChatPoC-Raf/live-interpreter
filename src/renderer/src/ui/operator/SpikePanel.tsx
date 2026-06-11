@@ -4,6 +4,8 @@
 // (latencja per segment widoczna w feedzie).
 import { useState, type ReactElement } from 'react';
 import type { ProfileDto, SettingsDto } from '../../../../shared/ipc';
+import { listDevices } from '../../audio/deviceRegistry';
+import { ensureOutputStarted } from '../../audio/deviceRestore';
 import { median, p95 } from '../../orchestrator/latency';
 import { runE2ECheck, type E2ECheckResult } from '../../orchestrator/soundcheck';
 import { sessionController } from '../../state/useSession';
@@ -28,6 +30,14 @@ export function SpikePanel({ settings, profiles, onSettingsChange, onOpenProfile
     if (!profile) return;
     setRunning(true);
     setResults([]);
+    // Spike ma dzialac bez sesji/soundchecku — startuje wyjscie sam (zapisany
+    // glosnik albo domyslny). Total fail toru audio pokaze czytelny blad w #1.
+    await ensureOutputStarted(
+      sessionController.engine,
+      await listDevices(),
+      { deviceId: settings.outputDeviceId, label: settings.outputDeviceLabel, groupId: settings.outputDeviceGroupId },
+      settings.outputGain,
+    ).catch(() => undefined);
     const acc: E2ECheckResult[] = [];
     for (let i = 0; i < RUNS; i++) {
       const r = await runE2ECheck(sessionController.engine, {
@@ -68,8 +78,10 @@ export function SpikePanel({ settings, profiles, onSettingsChange, onOpenProfile
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <h2>Spike latencji (Unit 2 — GATE ≤2 s)</h2>
         <p className="hint">
-          {RUNS} segmentow testowych przez realne API (MT + TTS klonem + playback). Wymaga kluczy,
-          profilu i uruchomionego wyjscia audio. Wyniki wklej do docs/spike-results.md.
+          {RUNS} segmentow testowych przez realne API: staly tekst → tlumaczenie → TTS klonem →
+          playback. Spike NIE uzywa mikrofonu — mowienie nic tu nie zmienia (pelne E2E z mikrofonem
+          to realna sesja). Wyjscie audio startuje samo (zapisany glosnik albo domyslny). Wymaga
+          kluczy API i profilu. Wyniki wklej do docs/spike-results.md.
         </p>
         {profiles.length > 0 ? (
           <>

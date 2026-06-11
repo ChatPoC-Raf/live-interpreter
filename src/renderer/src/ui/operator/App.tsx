@@ -1,6 +1,8 @@
 // Pulpit operatorski — sklada panele + dialogi + akcje sesji (Unit 10).
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import type { ProfileDto, SettingsDto } from '../../../../shared/ipc';
+import { listDevices } from '../../audio/deviceRegistry';
+import { restoreSavedDevices } from '../../audio/deviceRestore';
 import { median } from '../../orchestrator/latency';
 import { sessionController, useSession } from '../../state/useSession';
 import { AlertsPanel } from './AlertsPanel';
@@ -23,17 +25,27 @@ export function App(): ReactElement {
   const [recovered, setRecovered] = useState<string[]>([]);
   const [speakerVisible, setSpeakerVisible] = useState(true);
 
-  useEffect(() => {
-    void window.live.getSettings().then(setSettings);
-    void window.live.listProfiles().then(setProfiles);
-    void window.live.recoverSessions().then((r) => setRecovered(r.map((x) => x.sessionId)));
-    void window.live.setSpeakerStatus({ mode: 'IDLE' });
-  }, []);
-
   const patchSettings = useCallback((patch: Partial<SettingsDto>) => {
     setSettings((prev) => (prev ? { ...prev, ...patch } : prev));
     void window.live.saveSettings(patch);
   }, []);
+
+  useEffect(() => {
+    void window.live.getSettings().then((s) => {
+      setSettings(s);
+      // Przywroc zapisane urzadzenia do silnika — bez tego po restarcie dropdowny
+      // pokazuja urzadzenia, a tor audio jest martwy (ton testowy/soundcheck/spike).
+      void listDevices()
+        .then((devices) => restoreSavedDevices(sessionController.engine, devices, s))
+        .then((patch) => {
+          if (Object.keys(patch).length > 0) patchSettings(patch);
+        })
+        .catch(() => undefined); // best-effort — urzadzenia zawsze mozna wybrac recznie
+    });
+    void window.live.listProfiles().then(setProfiles);
+    void window.live.recoverSessions().then((r) => setRecovered(r.map((x) => x.sessionId)));
+    void window.live.setSpeakerStatus({ mode: 'IDLE' });
+  }, [patchSettings]);
 
   const refreshProfiles = useCallback(async () => {
     setProfiles(await window.live.listProfiles());
