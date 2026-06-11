@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+dist/
+*.log
+.env
+.env.*
+src/renderer/public/vad/
+sessions/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+# TODO: usun po gh auth refresh -s workflow — token bez scope workflow nie moze pushowac CI
+.github/workflows/

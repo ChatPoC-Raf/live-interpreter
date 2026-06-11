@@ -1,0 +1,160 @@
+/* Live Interpreter — ciemny motyw operatorski. Zero frameworkow CSS. */
+:root {
+  --bg: #10141a;
+  --bg-panel: #171d26;
+  --bg-elevated: #1f2733;
+  --border: #2b3645;
+  --text: #e6ebf2;
+  --text-dim: #8b97a8;
+  --accent: #3b82f6;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --err: #ef4444;
+  --purple: #8b5cf6;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 14px;
+}
+button {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.4; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.danger { background: var(--err); border-color: var(--err); color: #fff; }
+button.big { font-size: 15px; padding: 10px 22px; }
+input, select, textarea {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  width: 100%;
+}
+label { display: block; margin: 10px 0 4px; color: var(--text-dim); font-size: 12px; }
+h2 { font-size: 16px; margin: 0 0 10px; }
+h3 { font-size: 13px; margin: 14px 0 6px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ---- Layout pulpitu ---- */
+.app { display: flex; flex-direction: column; height: 100%; }
+.topbar {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--bg-panel);
+}
+.topbar .title { font-weight: 700; font-size: 15px; }
+.topbar .spacer { flex: 1; }
+.main-grid {
+  display: grid; grid-template-columns: 320px 1fr 300px;
+  gap: 12px; padding: 12px; flex: 1; min-height: 0;
+}
+.panel {
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px; overflow-y: auto;
+}
+.controls-bar {
+  display: flex; gap: 10px; align-items: center;
+  padding: 12px 16px; border-top: 1px solid var(--border); background: var(--bg-panel);
+}
+
+/* ---- Badge stanu ---- */
+.phase-badge {
+  padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 12px;
+  letter-spacing: 0.04em; border: 1px solid var(--border); color: var(--text-dim);
+}
+.phase-SLUCHAM { background: rgba(34,197,94,0.15); color: var(--ok); border-color: var(--ok); }
+.phase-DOMYKANIE, .phase-TLUMACZE { background: rgba(245,158,11,0.15); color: var(--warn); border-color: var(--warn); }
+.phase-ODTWARZAM { background: rgba(59,130,246,0.15); color: var(--accent); border-color: var(--accent); }
+.phase-PAUZA { background: rgba(139,92,246,0.15); color: var(--purple); border-color: var(--purple); }
+.phase-AWARIA_RETRY, .phase-AWARIA_TERMINALNA { background: rgba(239,68,68,0.2); color: var(--err); border-color: var(--err); }
+
+/* ---- VU meter ---- */
+.vu { height: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.vu-fill { height: 100%; background: linear-gradient(90deg, var(--ok), var(--warn) 75%, var(--err)); transition: width 60ms linear; }
+.gain-row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.gain-row input[type='range'] { flex: 1; padding: 0; }
+.device-warning { color: var(--warn); font-size: 12px; margin-top: 6px; }
+
+/* ---- Feed segmentow ---- */
+.segment-feed { display: flex; flex-direction: column; gap: 8px; }
+.segment-card {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.segment-card .seg-head { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-dim); }
+.segment-card .seg-original { margin-top: 6px; }
+.segment-card .seg-translated { margin-top: 4px; color: var(--accent); }
+.segment-card.failed { border-color: var(--err); }
+.seg-flag {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  background: rgba(245,158,11,0.2); color: var(--warn);
+}
+.seg-status { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--bg); }
+.latency-chip { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text-dim); }
+.latency-chip.over { color: var(--err); font-weight: 700; }
+
+/* ---- Alerty ---- */
+.alerts { display: flex; flex-direction: column; gap: 6px; }
+.alert { border-radius: 6px; padding: 8px 10px; font-size: 12px; border: 1px solid; }
+.alert-info { border-color: var(--accent); color: var(--accent); }
+.alert-warn { border-color: var(--warn); color: var(--warn); }
+.alert-error { border-color: var(--err); color: var(--err); }
+
+/* ---- Dialogi ---- */
+.dialog-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.dialog {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+  padding: 20px; width: 560px; max-width: 92vw; max-height: 86vh; overflow-y: auto;
+}
+.dialog .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.profile-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.profile-row .grow { flex: 1; }
+.hint { color: var(--text-dim); font-size: 12px; }
+.kv { display: flex; justify-content: space-between; padding: 3px 0; font-size: 13px; }
+.kv .k { color: var(--text-dim); }
+.mono { font-variant-numeric: tabular-nums; }
+.ok-text { color: var(--ok); }
+.warn-text { color: var(--warn); }
+.err-text { color: var(--err); }
+
+/* ---- Wizard soundcheck ---- */
+.wizard-steps { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.wizard-step-dot {
+  font-size: 11px; padding: 3px 8px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--text-dim);
+}
+.wizard-step-dot.active { border-color: var(--accent); color: var(--accent); }
+.wizard-step-dot.done { border-color: var(--ok); color: var(--ok); }
+
+/* ---- Okno mowcy ---- */
+.speaker-root {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center;
+  transition: background 200ms;
+}
+.speaker-label { font-size: 64px; font-weight: 800; letter-spacing: 0.02em; }
+.speaker-hint { font-size: 18px; opacity: 0.85; max-width: 460px; }
+.speaker-idle { background: var(--bg); color: var(--text-dim); }
+.speaker-mow { background: #052e16; color: #4ade80; }
+.speaker-czekaj { background: #451a03; color: #fbbf24; }
+.speaker-odtwarzam { background: #172554; color: #93c5fd; }
+.speaker-pauza { background: #2e1065; color: #c4b5fd; }
+.speaker-awaria { background: #450a0a; color: #fca5a5; }
+.speaker-brief-btn { margin-top: 10px; opacity: 0.7; }
+.speaker-brief { font-size: 14px; text-align: left; max-width: 460px; opacity: 0.9; }
+.speaker-brief p { margin: 4px 0; }
