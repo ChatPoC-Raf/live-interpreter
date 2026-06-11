@@ -3,6 +3,7 @@
 // nagrywa do artefaktow, barge-in mierzy SessionController z poziomu RMS).
 // Wersja vad-web PRZYPIETA w package.json (0.0.30) — API 0.0.x bywa niestabilne.
 import { MicVAD } from '@ricky0123/vad-web';
+import { vadAssetBase } from './vadAssets';
 import { PauseTracker } from './vadLogic';
 
 export interface VadGateCallbacks {
@@ -43,6 +44,10 @@ export class VadGate {
       if (gateRef && gateRef.mode === 'listening') fn();
     };
 
+    // Absolutny URL wymagany — wzgledny prefix lamie dynamiczny import()
+    // modulu ORT ("no available backend found"); szczegoly w vadAssets.ts.
+    const assetBase = vadAssetBase(document.baseURI);
+
     const vad = await MicVAD.new({
       // Strumien nalezy do AudioEngine — pause/resume bramy NIE rusza tracku.
       getStream: async () => opts.stream,
@@ -51,8 +56,8 @@ export class VadGate {
       startOnLoad: false,
       processorType: 'AudioWorklet',
       model: 'v5',
-      baseAssetPath: 'vad/',
-      onnxWASMBasePath: 'vad/',
+      baseAssetPath: assetBase,
+      onnxWASMBasePath: assetBase,
       positiveSpeechThreshold: POSITIVE_THRESHOLD,
       negativeSpeechThreshold: NEGATIVE_THRESHOLD,
       redemptionMs: opts.redemptionMs,
