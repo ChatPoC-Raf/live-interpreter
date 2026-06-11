@@ -283,6 +283,9 @@ export class SessionController {
       const seg = this.currentSegment();
       if (seg) seg.flags = addFlag(seg.flags, 'GAP');
       this.pushAlert('warn', 'segment_gap');
+      // Awaria STT przed commit to najczesciej zerwany WS — bez odtworzenia
+      // sesji STT KAZDY kolejny segment konczylby sie luka.
+      await this.reopenStt();
       this.dispatch({ type: 'SKIP' });
       return;
     }
@@ -524,6 +527,26 @@ export class SessionController {
         }
       },
     });
+  }
+
+  /** Odtworz sesje STT po zerwaniu (nowy single-use token + swiezy WS). */
+  private async reopenStt(): Promise<void> {
+    const old = this.stt;
+    try {
+      const fresh = await this.openStt();
+      if (!this.sessionActive) {
+        // Sesja skonczyla sie w trakcie reconnectu — nie zostawiaj otwartego WS.
+        fresh.close();
+        return;
+      }
+      old?.close();
+      this.stt = fresh;
+      this.pushAlert('info', 'stt_reconnected');
+    } catch {
+      // NIE nullujemy this.stt — martwa sesja utrzymuje przeplyw bledow
+      // (commit -> GAP -> kolejna proba reconnectu przy nastepnym segmencie).
+      this.pushAlert('warn', 'stt_reconnect_failed');
+    }
   }
 
   private routePcm(pcm: Int16Array): void {
