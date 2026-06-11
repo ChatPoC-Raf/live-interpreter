@@ -23,7 +23,7 @@ function fakeStt(final: SttFinal): SttSession {
 
 function fakeTranslation(tokens: string[], onRequest?: (r: TranslationRequest) => void): TranslationProvider {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await
+     
     async *translateStream(req) {
       onRequest?.(req);
       for (const t of tokens) {
@@ -171,7 +171,7 @@ describe('runSegment — abort i bledy', () => {
     const tts = fakeTts(new Int16Array([1]));
     const sink = fakeSink();
     const translation: TranslationProvider = {
-      // eslint-disable-next-line @typescript-eslint/require-await
+       
       async *translateStream(req) {
         yield 'Pierwsze zdanie. ';
         ctrl.abort(); // abort w polowie strumienia
@@ -191,7 +191,7 @@ describe('runSegment — abort i bledy', () => {
   it('blad MT propaguje jako PipelineError po sprzatnieciu', async () => {
     const tts = fakeTts(new Int16Array([1]));
     const translation: TranslationProvider = {
-      // eslint-disable-next-line @typescript-eslint/require-await, require-yield
+      // eslint-disable-next-line require-yield
       async *translateStream() {
         throw new Error('boom z sieci');
       },

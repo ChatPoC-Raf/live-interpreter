@@ -37,6 +37,8 @@ export interface SegmentPipelineDeps {
   meter: LatencyMeter;
   now: () => number;
   onTranslationDelta?: (full: string) => void;
+  /** Po udanym commit STT — kontroler zapamietuje tekst do ewentualnego RETRY. */
+  onCommitted?: (text: string, lang: string | null) => void;
 }
 
 /**
@@ -109,6 +111,7 @@ export async function runSegment(
 ): Promise<SegmentOutcome> {
   const final = await deps.stt.commit();
   deps.meter.mark('sttFinal', deps.now());
+  deps.onCommitted?.(final.text.trim(), final.language);
 
   const text = final.text.trim();
   if (text.length === 0) {

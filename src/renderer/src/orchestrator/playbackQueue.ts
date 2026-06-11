@@ -1,7 +1,7 @@
 // Kolejka odtwarzania PCM 24 kHz: chunki TTS schedulowane bezszwowo
 // (AudioBufferSourceNode back-to-back). Czysta arytmetyka w PlaybackScheduler.
 
-export function int16ToFloat32(pcm: Int16Array): Float32Array {
+export function int16ToFloat32(pcm: Int16Array): Float32Array<ArrayBuffer> {
   const out = new Float32Array(pcm.length);
   for (let i = 0; i < pcm.length; i++) out[i] = pcm[i] / 0x8000;
   return out;
