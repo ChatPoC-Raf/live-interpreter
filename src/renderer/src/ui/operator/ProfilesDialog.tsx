@@ -146,12 +146,15 @@ export function ProfilesDialog({ settings, onSettingsChange, onClose }: Props): 
 
         {profiles.map((p) => (
           <div key={p.id} className="profile-row">
-            <input
-              type="radio"
-              name="activeProfile"
-              checked={settings.activeProfileId === p.id}
-              onChange={() => onSettingsChange({ activeProfileId: p.id })}
-            />
+            <label className="active-pick" title="Ten profil bedzie uzyty w sesji i spike'u">
+              <input
+                type="radio"
+                name="activeProfile"
+                checked={settings.activeProfileId === p.id}
+                onChange={() => onSettingsChange({ activeProfileId: p.id })}
+              />
+              Aktywny
+            </label>
             <div className="grow">
               <b>{p.name}</b>
               <div className="hint">

@@ -93,6 +93,20 @@ export function SettingsDialog({ settings, onSettingsChange, onClose }: Props): 
           ))}
         </select>
 
+        <h3>Glos (klon mowcy)</h3>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={settings.voiceImproveEnabled}
+            onChange={(e) => onSettingsChange({ voiceImproveEnabled: e.target.checked })}
+          />
+          Doszkalaj klon glosu w trakcie wystapienia
+        </label>
+        <div className="hint">
+          Aplikacja zbiera czysta mowe wykladowcy (tylko gdy mikrofon otwarty) i co kilka minut
+          dosyla ja do klonu ElevenLabs — glos tlumaczenia brzmi coraz lepiej w miare mowienia.
+        </div>
+
         <h3>Rytm (VAD)</h3>
         <label>Cisza konczaca ture: {settings.vadRedemptionMs} ms</label>
         <input

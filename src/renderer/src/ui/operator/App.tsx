@@ -154,7 +154,15 @@ export function App(): ReactElement {
           onClose={() => setDialog(null)}
         />
       )}
-      {dialog === 'spike' && <SpikePanel settings={settings} profiles={profiles} onClose={() => setDialog(null)} />}
+      {dialog === 'spike' && (
+        <SpikePanel
+          settings={settings}
+          profiles={profiles}
+          onSettingsChange={patchSettings}
+          onOpenProfiles={() => setDialog('profiles')}
+          onClose={() => setDialog(null)}
+        />
+      )}
     </div>
   );
 }

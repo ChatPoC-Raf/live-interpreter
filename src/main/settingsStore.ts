@@ -22,6 +22,7 @@ export const DEFAULT_SETTINGS: SettingsDto = {
   inputGain: 1,
   outputGain: 1,
   activeProfileId: null,
+  voiceImproveEnabled: true,
 };
 
 interface StoreFile {

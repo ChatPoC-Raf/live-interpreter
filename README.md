@@ -51,6 +51,10 @@ Kluczowe decyzje i pelny plan: katalog planistyczny projektu (BudgetLighthouse
   `tts/NNN.wav`; crash recovery przy starcie; eksport ZIP.
 - **Bledy**: 429/5xx/timeout = przejsciowe (retry + backoff), 401/quota = terminalne
   (podmiana klucza mid-session, bez restartu).
+- **Doszkalanie klonu w trakcie wystapienia** (Ustawienia -> Glos): czysta mowa mowcy
+  (tylko przy otwartej bramie mikrofonu — zero przebic z PA) jest zbierana turami;
+  po uzbieraniu >=60 s swiezego materialu partia idzie w tle do ElevenLabs edit-voice
+  (cooldown 4 min, max 5 doszkolen/sesje). Glos tlumaczenia poprawia sie w miare mowienia.
 
 ## ⚠️ Sprzęt — mikrofon
 

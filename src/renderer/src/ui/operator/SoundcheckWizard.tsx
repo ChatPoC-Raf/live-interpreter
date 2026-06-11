@@ -163,8 +163,29 @@ export function SoundcheckWizard({ settings, profiles, onSettingsChange, onClose
 
         {step === 4 && (
           <div>
-            <p>Segment testowy E2E: tlumaczenie + synteza klonem ({activeProfile?.name ?? 'BRAK PROFILU'}) przez PA.</p>
-            <button onClick={() => void runE2e()} disabled={busy || !activeProfile}>
+            <p>Segment testowy E2E: tlumaczenie + synteza klonem przez PA.</p>
+            {profiles.length > 0 ? (
+              <>
+                <label>Aktywny profil mowcy</label>
+                <select
+                  value={settings.activeProfileId ?? ''}
+                  onChange={(e) => onSettingsChange({ activeProfileId: e.target.value || null })}
+                  disabled={busy}
+                >
+                  <option value="">— wybierz profil —</option>
+                  {profiles.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <div className="warn-text">
+                Brak profili mowcow — utworz klon glosu w „Profile" (przycisk w topbarze), potem wroc tu.
+              </div>
+            )}
+            <button onClick={() => void runE2e()} disabled={busy || !activeProfile} style={{ marginTop: 8 }}>
               {busy ? 'Testuje…' : '▶ Uruchom segment testowy'}
             </button>
             {e2e && (

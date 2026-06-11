@@ -32,6 +32,8 @@ export const ALERT_MESSAGES: Record<string, string> = {
   hfp_detected: 'Mikrofon w trybie HFP (jakosc telefoniczna) — zalecany mikrofon z donglem USB',
   segment_gap: 'Luka: tresc nagrana w original.wav, ale nie przetlumaczona',
   force_limit: 'Tura przekroczyla 3 minuty — wymuszono domkniecie segmentu',
+  voice_improved: 'Klon glosu doszkolony swieza mowa z wystapienia — kolejne segmenty brzmia lepiej',
+  voice_improve_failed: 'Doszkolenie klonu glosu nieudane — tlumaczenie dziala dalej na dotychczasowym glosie',
 };
 
 export function alertMessage(code: string): string {

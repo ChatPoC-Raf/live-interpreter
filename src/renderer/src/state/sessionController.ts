@@ -17,6 +17,7 @@ import {
 import { LatencyMeter } from '../orchestrator/latency';
 import { PlaybackQueue } from '../orchestrator/playbackQueue';
 import { runSegment, translateAndSpeak } from '../orchestrator/segmentPipeline';
+import { pcm16ToWavBlob, VOICE_IMPROVE, VoiceImprover } from '../orchestrator/voiceImprover';
 import { createProviders, type ProviderBundle } from '../providers/factory';
 import { LanguageHysteresis } from '../providers/langHysteresis';
 import { backoffDelay } from '../providers/retry';
@@ -35,6 +36,8 @@ export class SessionController {
 
   private settings: SettingsDto | null = null;
   private voiceId: string | null = null;
+  private profileName: string | null = null;
+  private improver = new VoiceImprover();
   private providers: ProviderBundle | null = null;
   private vad: VadGate | null = null;
   private stt: SttSession | null = null;
@@ -165,11 +168,13 @@ export class SessionController {
     switch (event) {
       case 'speech_start': {
         this.segments.push(newSegment(this.machine.ctx.segmentCounter, Date.now()));
+        this.improver.beginTake();
         this.startTurnLimitTimer();
         break;
       }
       case 'speech_misfire': {
         this.clearTurnLimitTimer();
+        this.improver.discardTake();
         const seg = this.currentSegment();
         if (seg) {
           seg.status = 'done';
@@ -179,6 +184,7 @@ export class SessionController {
       }
       case 'commit': {
         this.clearTurnLimitTimer();
+        this.improver.commitTake();
         this.meter = new LatencyMeter();
         this.meter.mark('pauseDetected', performance.now());
         const seg = this.currentSegment();
@@ -191,6 +197,7 @@ export class SessionController {
           seg.status = 'done';
           seg.latencyMs = this.lastLatencyMs;
         }
+        if (this.improver.shouldUpload(performance.now())) void this.improveVoice();
         break;
       }
       case 'segment_skipped': {
@@ -446,6 +453,8 @@ export class SessionController {
       }
       this.settings = settings;
       this.voiceId = opts.voiceId;
+      this.profileName = opts.profileName;
+      this.improver.reset(settings.voiceImproveEnabled);
       this.providers = createProviders({
         elevenKey: secrets.elevenKey,
         llmKey: secrets.llmKey,
@@ -528,7 +537,30 @@ export class SessionController {
       (this.machine.phase === 'SLUCHAM' || this.machine.phase === 'DOMYKANIE')
     ) {
       this.stt.sendAudio(pcm);
+      // Ta sama czysta mowa (bez przebic z PA) doszkala klon glosu.
+      this.improver.feed(pcm);
     }
+  }
+
+  /** Doszkolenie klonu IVC partia swiezej mowy — w tle, nigdy nie blokuje pipeline'u. */
+  private async improveVoice(): Promise<void> {
+    if (!this.providers || !this.voiceId) return;
+    const pcm = this.improver.beginUpload();
+    if (!pcm) return;
+    try {
+      await this.providers.voices.addSamples({
+        voiceId: this.voiceId,
+        name: this.profileName ?? 'Live Interpreter',
+        sample: pcm16ToWavBlob(pcm, VOICE_IMPROVE.sampleRate),
+      });
+      this.improver.finishUpload(true, performance.now());
+      this.pushAlert('info', 'voice_improved');
+    } catch {
+      // Blad doszkolenia NIGDY nie psuje sesji — tylko backoff i notka w alertach.
+      this.improver.finishUpload(false, performance.now());
+      this.pushAlert('warn', 'voice_improve_failed');
+    }
+    this.emit();
   }
 
   private routeLevel(rmsValue: number): void {
@@ -545,6 +577,8 @@ export class SessionController {
 
   private async teardownSession(): Promise<void> {
     this.clearTurnLimitTimer();
+    // Resztka zebranej mowy doszkala klon na ZAPAS (kolejne sesje) — best-effort.
+    if (this.improver.hasFinalBatch()) void this.improveVoice();
     for (const u of this.unsubscribers) u();
     this.unsubscribers = [];
     this.stt?.close();

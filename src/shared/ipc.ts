@@ -28,6 +28,8 @@ export interface SettingsDto {
   outputGain: number;
   /** Aktywny profil mowcy. */
   activeProfileId: string | null;
+  /** Doszkalanie klonu glosu mowa zbierana w trakcie wystapienia. */
+  voiceImproveEnabled: boolean;
 }
 
 export interface SecretsPresenceDto {

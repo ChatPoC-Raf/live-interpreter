@@ -75,6 +75,8 @@ export interface CreateVoiceResult {
 export interface VoicesProvider {
   list(): Promise<VoiceInfo[]>;
   createIvc(opts: { name: string; description: string; sample: Blob }): Promise<CreateVoiceResult>;
+  /** Doszkol istniejacy klon IVC nowa probka mowy (edit voice — dodaje sample). */
+  addSamples(opts: { voiceId: string; name: string; sample: Blob }): Promise<void>;
   delete(voiceId: string): Promise<void>;
 }
 

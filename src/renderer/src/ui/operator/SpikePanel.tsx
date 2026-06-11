@@ -11,12 +11,14 @@ import { sessionController } from '../../state/useSession';
 interface Props {
   settings: SettingsDto;
   profiles: ProfileDto[];
+  onSettingsChange: (patch: Partial<SettingsDto>) => void;
+  onOpenProfiles: () => void;
   onClose: () => void;
 }
 
 const RUNS = 10;
 
-export function SpikePanel({ settings, profiles, onClose }: Props): ReactElement {
+export function SpikePanel({ settings, profiles, onSettingsChange, onOpenProfiles, onClose }: Props): ReactElement {
   const [results, setResults] = useState<E2ECheckResult[]>([]);
   const [running, setRunning] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -69,10 +71,31 @@ export function SpikePanel({ settings, profiles, onClose }: Props): ReactElement
           {RUNS} segmentow testowych przez realne API (MT + TTS klonem + playback). Wymaga kluczy,
           profilu i uruchomionego wyjscia audio. Wyniki wklej do docs/spike-results.md.
         </p>
-        <button className="primary" disabled={running || !profile} onClick={() => void run()}>
+        {profiles.length > 0 ? (
+          <>
+            <label>Aktywny profil mowcy (klon glosu do testu)</label>
+            <select
+              value={settings.activeProfileId ?? ''}
+              onChange={(e) => onSettingsChange({ activeProfileId: e.target.value || null })}
+              disabled={running}
+            >
+              <option value="">— wybierz profil —</option>
+              {profiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </>
+        ) : (
+          <div className="warn-text" style={{ marginBottom: 8 }}>
+            Brak profili mowcow — najpierw nagraj probke glosu (1-2 min) i utworz klon.{' '}
+            <button onClick={onOpenProfiles}>Otworz Profile</button>
+          </div>
+        )}
+        <button className="primary" disabled={running || !profile} onClick={() => void run()} style={{ marginTop: 8 }}>
           {running ? `Mierze… (${results.length}/${RUNS})` : '▶ Uruchom spike'}
         </button>
-        {!profile && <div className="warn-text">Najpierw wybierz aktywny profil mowcy.</div>}
 
         {results.length > 0 && (
           <div style={{ marginTop: 12 }}>

@@ -57,6 +57,23 @@ export class ElevenVoices implements VoicesProvider {
     };
   }
 
+  async addSamples(opts: { voiceId: string; name: string; sample: Blob }): Promise<void> {
+    const form = new FormData();
+    form.append('name', opts.name); // edit voice wymaga name nawet bez zmiany
+    form.append('files', opts.sample, 'live-update.wav');
+    let res: Response;
+    try {
+      res = await this.fetchImpl(`${BASE}/voices/${encodeURIComponent(opts.voiceId)}/edit`, {
+        method: 'POST',
+        headers: this.headers(),
+        body: form,
+      });
+    } catch (err) {
+      throw toPipelineError('voices', err);
+    }
+    if (!res.ok) throw httpError('voices', res.status, await res.text().catch(() => ''));
+  }
+
   async delete(voiceId: string): Promise<void> {
     let res: Response;
     try {
