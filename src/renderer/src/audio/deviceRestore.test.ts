@@ -27,17 +27,34 @@ function fakeEngine(opts?: {
   inputRunning?: boolean;
   outputRunning?: boolean;
   failStart?: boolean;
+  sinkId?: string | null;
+  outputState?: AudioContextState;
 }): {
-  engine: Pick<AudioEngine, 'getInputStream' | 'getOutputContext' | 'startInput' | 'startOutput'>;
+  engine: Pick<
+    AudioEngine,
+    'getInputStream' | 'getOutputContext' | 'getOutputSinkId' | 'startInput' | 'startOutput'
+  >;
   inputCalls: StartCall[];
   outputCalls: StartCall[];
+  resumeCalls: () => number;
 } {
   const inputCalls: StartCall[] = [];
   const outputCalls: StartCall[] = [];
+  let resumed = 0;
+  const ctx = opts?.outputRunning
+    ? ({
+        state: opts?.outputState ?? 'running',
+        resume: () => {
+          resumed += 1;
+          return Promise.resolve();
+        },
+      } as unknown as AudioContext)
+    : null;
   return {
     engine: {
       getInputStream: () => (opts?.inputRunning ? ({} as MediaStream) : null),
-      getOutputContext: () => (opts?.outputRunning ? ({} as AudioContext) : null),
+      getOutputContext: () => ctx,
+      getOutputSinkId: () => opts?.sinkId ?? null,
       startInput: (id: string | null, gain: number) => {
         inputCalls.push({ id, gain });
         if (opts?.failStart) return Promise.reject(new Error('start fail'));
@@ -52,6 +69,7 @@ function fakeEngine(opts?: {
     },
     inputCalls,
     outputCalls,
+    resumeCalls: () => resumed,
   };
 }
 
@@ -121,6 +139,31 @@ describe('ensureOutputStarted', () => {
       { id: 'spk-1', gain: 0.8 },
       { id: null, gain: 0.8 },
     ]);
+  });
+
+  it('nie restartuje gdy aktualny sink nadal jest na liscie urzadzen', async () => {
+    const f = fakeEngine({ outputRunning: true, sinkId: 'spk-1' });
+    await ensureOutputStarted(f.engine, DEVICES, { deviceId: 'spk-1', label: null, groupId: null }, 0.8);
+    expect(f.outputCalls).toHaveLength(0);
+  });
+
+  it('restartuje na zapisanym glosniku gdy aktualny sink zniknal z systemu', async () => {
+    const f = fakeEngine({ outputRunning: true, sinkId: 'spk-odpiety' });
+    await ensureOutputStarted(f.engine, DEVICES, { deviceId: 'spk-1', label: null, groupId: null }, 0.8);
+    expect(f.outputCalls).toEqual([{ id: 'spk-1', gain: 0.8 }]);
+  });
+
+  it('restartuje na domyslnym gdy sink zniknal i zapisany glosnik tez nieobecny', async () => {
+    const f = fakeEngine({ outputRunning: true, sinkId: 'spk-odpiety' });
+    await ensureOutputStarted(f.engine, DEVICES, { deviceId: 'spk-brak', label: 'Inny', groupId: 'x' }, 0.8);
+    expect(f.outputCalls).toEqual([{ id: null, gain: 0.8 }]);
+  });
+
+  it('dobudza zawieszony kontekst zamiast restartowac gdy sink jest obecny', async () => {
+    const f = fakeEngine({ outputRunning: true, sinkId: 'spk-1', outputState: 'suspended' });
+    await ensureOutputStarted(f.engine, DEVICES, { deviceId: 'spk-1', label: null, groupId: null }, 0.8);
+    expect(f.outputCalls).toHaveLength(0);
+    expect(f.resumeCalls()).toBe(1);
   });
 });
 

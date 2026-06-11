@@ -67,6 +67,19 @@ export async function runE2ECheck(
   if (!ctx || !gain) {
     return { ok: false, totalMs: null, breakdown: {}, translatedText: '', error: 'Wyjscie audio nie uruchomione' };
   }
+  // Zawieszony kontekst gralby "w prozni" — pomiar wyszedlby OK, a nic nie slychac.
+  if (ctx.state === 'suspended') {
+    await ctx.resume().catch(() => undefined);
+    if ((ctx.state as AudioContextState) === 'suspended') {
+      return {
+        ok: false,
+        totalMs: null,
+        breakdown: {},
+        translatedText: '',
+        error: 'Wyjscie audio zawieszone — uzyj "Ton testowy" w panelu Audio i sprobuj ponownie',
+      };
+    }
+  }
   const providers = createProviders({
     elevenKey: secrets.elevenKey,
     llmKey: secrets.llmKey,

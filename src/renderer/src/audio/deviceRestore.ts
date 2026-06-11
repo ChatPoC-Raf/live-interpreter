@@ -5,13 +5,15 @@ import type { SettingsDto } from '../../../shared/ipc';
 import type { AudioEngine } from './audioEngine';
 import { resolveDevice, type AudioDeviceInfo, type SavedDevice } from './deviceRegistry';
 
-type OutputEngine = Pick<AudioEngine, 'getOutputContext' | 'startOutput'>;
+type OutputEngine = Pick<AudioEngine, 'getOutputContext' | 'getOutputSinkId' | 'startOutput'>;
 type RestoreEngine = Pick<AudioEngine, 'getInputStream' | 'startInput'> & OutputEngine;
 
 /**
  * Gwarantuje dzialajacy tor wyjsciowy przed spike/soundcheck — bez sesji.
  * Gdy zapisany glosnik zniknal albo odmawia startu, gra na domyslnym wyjsciu
- * systemowym (dla pomiaru latencji to wystarczy).
+ * systemowym (dla pomiaru latencji to wystarczy). Kontekst wpiety na sink,
+ * ktory zniknal z systemu (odpiety glosnik PA), gra "w prozni" — wykrywamy to
+ * i restartujemy tor; zawieszony kontekst dobudzamy zamiast restartowac.
  */
 export async function ensureOutputStarted(
   engine: OutputEngine,
@@ -19,7 +21,17 @@ export async function ensureOutputStarted(
   saved: SavedDevice,
   gain: number,
 ): Promise<void> {
-  if (engine.getOutputContext()) return;
+  const ctx = engine.getOutputContext();
+  if (ctx) {
+    const sinkId = engine.getOutputSinkId();
+    const sinkPresent =
+      sinkId === null || devices.some((d) => d.kind === 'audiooutput' && d.deviceId === sinkId);
+    if (sinkPresent) {
+      if (ctx.state === 'suspended') await ctx.resume().catch(() => undefined);
+      return;
+    }
+    // sink zniknal — leci restart nizej (zapisany glosnik albo domyslny)
+  }
   const resolved = resolveDevice(devices, 'audiooutput', saved);
   try {
     await engine.startOutput(resolved?.deviceId ?? null, gain);

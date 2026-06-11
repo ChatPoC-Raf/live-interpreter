@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState, type ReactElement } from 'react';
 import type { SettingsDto } from '../../../../shared/ipc';
 import { listDevices, onDeviceChange, type AudioDeviceInfo } from '../../audio/deviceRegistry';
+import { ensureOutputStarted } from '../../audio/deviceRestore';
 import { HFP_WARNING } from '../../audio/hfp';
 import { vuPercent } from '../../audio/vu';
 import { sessionController, useSession } from '../../state/useSession';
@@ -15,6 +16,7 @@ interface Props {
 export function DevicePanel({ settings, onSettingsChange, disabled }: Props): ReactElement {
   const session = useSession();
   const [devices, setDevices] = useState<AudioDeviceInfo[]>([]);
+  const [toneError, setToneError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setDevices(await listDevices());
@@ -36,6 +38,23 @@ export function DevicePanel({ settings, onSettingsChange, disabled }: Props): Re
       inputDeviceGroupId: dev?.groupId ?? null,
     });
     await sessionController.engine.startInput(deviceId, settings.inputGain);
+  };
+
+  const playTone = async (): Promise<void> => {
+    setToneError(null);
+    try {
+      // Tor wyjsciowy startuje sam (zapisany glosnik albo domyslny) — cichy
+      // throw z playTestTone wygladal dla operatora jak "nic sie nie dzieje".
+      await ensureOutputStarted(
+        sessionController.engine,
+        await listDevices(),
+        { deviceId: settings.outputDeviceId, label: settings.outputDeviceLabel, groupId: settings.outputDeviceGroupId },
+        settings.outputGain,
+      );
+      await sessionController.engine.playTestTone();
+    } catch (e) {
+      setToneError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const applyOutput = async (deviceId: string): Promise<void> => {
@@ -122,13 +141,10 @@ export function DevicePanel({ settings, onSettingsChange, disabled }: Props): Re
         />
         <span className="mono hint">{settings.outputGain.toFixed(2)}</span>
       </div>
-      <button
-        style={{ marginTop: 8 }}
-        onClick={() => void sessionController.engine.playTestTone()}
-        disabled={!settings.outputDeviceId}
-      >
+      <button style={{ marginTop: 8 }} onClick={() => void playTone()} disabled={disabled}>
         🔊 Ton testowy
       </button>
+      {toneError && <div className="err-text" style={{ marginTop: 6 }}>{toneError}</div>}
     </div>
   );
 }

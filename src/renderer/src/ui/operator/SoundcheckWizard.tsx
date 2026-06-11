@@ -2,6 +2,8 @@
 // do GOTOWOSC (gate), chyba ze operator swiadomie uzyje "Pomin (tryb dev)".
 import { useState, type ReactElement } from 'react';
 import type { ProfileDto, SettingsDto } from '../../../../shared/ipc';
+import { listDevices } from '../../audio/deviceRegistry';
+import { ensureOutputStarted } from '../../audio/deviceRestore';
 import { HFP_WARNING } from '../../audio/hfp';
 import {
   measureCrosstalk,
@@ -28,6 +30,8 @@ export function SoundcheckWizard({ settings, profiles, onSettingsChange, onClose
   const [noise, setNoise] = useState<number | null>(null);
   const [crosstalk, setCrosstalk] = useState<number | null>(null);
   const [paConfirmed, setPaConfirmed] = useState(false);
+  const [toneError, setToneError] = useState<string | null>(null);
+  const [tonePlayedVia, setTonePlayedVia] = useState<string | null>(null);
   const [e2e, setE2e] = useState<E2ECheckResult | null>(null);
   const [preflight, setPreflight] = useState<{ keys: boolean; profile: boolean } | null>(null);
 
@@ -39,6 +43,31 @@ export function SoundcheckWizard({ settings, profiles, onSettingsChange, onClose
     setBusy(true);
     try {
       setNoise(await measureNoiseFloor(sessionController.engine));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const playTone = async (): Promise<void> => {
+    setBusy(true);
+    setToneError(null);
+    setTonePlayedVia(null);
+    try {
+      // Tor wyjsciowy startuje sam (zapisany glosnik albo domyslny) — bez tego
+      // ton po prostu nie gra i nie wiadomo dlaczego (klasa "dropdown klamie").
+      const devices = await listDevices();
+      await ensureOutputStarted(
+        sessionController.engine,
+        devices,
+        { deviceId: settings.outputDeviceId, label: settings.outputDeviceLabel, groupId: settings.outputDeviceGroupId },
+        settings.outputGain,
+      );
+      await sessionController.engine.playTestTone();
+      const sinkId = sessionController.engine.getOutputSinkId();
+      const sink = devices.find((d) => d.kind === 'audiooutput' && d.deviceId === sinkId);
+      setTonePlayedVia(sink?.label ?? 'domyslne wyjscie systemowe');
+    } catch (e) {
+      setToneError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }
@@ -136,9 +165,22 @@ export function SoundcheckWizard({ settings, profiles, onSettingsChange, onClose
         {step === 2 && (
           <div>
             <p>Puszcz ton testowy i potwierdz, ze slychac go z glosnika PA (nie z laptopa).</p>
-            <button onClick={() => void sessionController.engine.playTestTone()} disabled={!outputReady}>
-              🔊 Ton testowy
+            <button onClick={() => void playTone()} disabled={busy}>
+              {busy ? 'Gram ton…' : '🔊 Ton testowy'}
             </button>
+            {settings.outputGain === 0 && (
+              <div className="warn-text" style={{ marginTop: 8 }}>
+                Gain wyjscia = 0 — ton bedzie nieslyszalny. Podnies suwak w panelu Audio.
+              </div>
+            )}
+            {toneError && <div className="err-text" style={{ marginTop: 8 }}>Blad: {toneError}</div>}
+            {tonePlayedVia && (
+              <div className="hint" style={{ marginTop: 8 }}>Ton zagral przez: {tonePlayedVia}</div>
+            )}
+            <p className="hint" style={{ marginTop: 8 }}>
+              Gdy wybrany glosnik jest odlaczony, ton gra z domyslnego wyjscia systemowego (np.
+              glosnika laptopa) — do proby na sucho to OK; na evencie wybierz PA w panelu Audio.
+            </p>
             <label style={{ marginTop: 10 }}>
               <input type="checkbox" checked={paConfirmed} onChange={(e) => setPaConfirmed(e.target.checked)} style={{ width: 'auto', marginRight: 8 }} />
               Slychac z PA ✓

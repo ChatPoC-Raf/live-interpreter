@@ -22,6 +22,7 @@ export class AudioEngine {
   private workletNode: AudioWorkletNode | null = null;
   private outputCtx: AudioContext | null = null;
   private outputGainNode: GainNode | null = null;
+  private outputSinkId: string | null = null;
 
   private pcmListeners = new Set<PcmListener>();
   private inputLevelListeners = new Set<LevelListener>();
@@ -121,11 +122,13 @@ export class AudioEngine {
       await (
         this.outputCtx as AudioContext & { setSinkId(id: string): Promise<void> }
       ).setSinkId(deviceId);
+      this.outputSinkId = deviceId;
     }
   }
 
   async stopOutput(): Promise<void> {
     this.outputGainNode = null;
+    this.outputSinkId = null;
     if (this.outputCtx) {
       await this.outputCtx.close().catch(() => undefined);
       this.outputCtx = null;
@@ -140,6 +143,11 @@ export class AudioEngine {
     return this.outputCtx;
   }
 
+  /** Id glosnika, na ktory wpieto wyjscie (null = domyslne wyjscie systemowe). */
+  getOutputSinkId(): string | null {
+    return this.outputSinkId;
+  }
+
   getOutputGainNode(): GainNode | null {
     return this.outputGainNode;
   }
@@ -147,6 +155,13 @@ export class AudioEngine {
   /** Ton testowy do soundchecku PA (sinus). Zwraca po zakonczeniu. */
   async playTestTone(freq = 440, ms = 800): Promise<void> {
     if (!this.outputCtx || !this.outputGainNode) throw new Error('Wyjscie audio nie uruchomione');
+    // Kontekst utworzony bez gestu uzytkownika bywa zawieszony — wtedy oscylator
+    // gra "w prozni" i nic nie slychac. Klik w "Ton testowy" to gest, wiec resume
+    // tutaj zawsze ma prawo przejsc.
+    if (this.outputCtx.state === 'suspended') await this.outputCtx.resume();
+    if (this.outputCtx.state !== 'running') {
+      throw new Error('Wyjscie audio zawieszone — wybierz glosnik ponownie w panelu Audio');
+    }
     const osc = this.outputCtx.createOscillator();
     osc.frequency.value = freq;
     const env = this.outputCtx.createGain();
