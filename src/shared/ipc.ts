@@ -107,6 +107,8 @@ export interface LiveApi {
 
   setSpeakerStatus(status: SpeakerStatusDto): Promise<void>;
   onSpeakerStatus(cb: (status: SpeakerStatusDto) => void): () => void;
+  /** Pokaz/ukryj okno wskaznika mowcy (odtwarza je po zamknieciu); zwraca nowa widocznosc. */
+  toggleSpeakerWindow(): Promise<boolean>;
 }
 
 export const IPC = {
@@ -128,4 +130,5 @@ export const IPC = {
   artifactsOpenFolder: 'artifacts:open-folder',
   speakerSet: 'speaker:set',
   speakerStatus: 'speaker:status',
+  speakerToggleWindow: 'speaker:toggle-window',
 } as const;

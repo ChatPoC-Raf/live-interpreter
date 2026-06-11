@@ -5,16 +5,36 @@ import { createOperatorWindow, createSpeakerWindow } from './windows';
 let operatorWindow: BrowserWindow | null = null;
 let speakerWindow: BrowserWindow | null = null;
 
-function createWindows(): void {
-  operatorWindow = createOperatorWindow();
+function spawnSpeakerWindow(): void {
   speakerWindow = createSpeakerWindow();
+  speakerWindow.on('closed', () => {
+    speakerWindow = null;
+  });
+}
+
+function createWindows(): void {
+  // Wskaznik mowcy PIERWSZY, pulpit operatora OSTATNI — operator dostaje fokus na starcie.
+  spawnSpeakerWindow();
+  operatorWindow = createOperatorWindow();
   operatorWindow.on('closed', () => {
     operatorWindow = null;
     if (speakerWindow && !speakerWindow.isDestroyed()) speakerWindow.close();
   });
-  speakerWindow.on('closed', () => {
-    speakerWindow = null;
-  });
+}
+
+/** Pokaz/ukryj wskaznik mowcy; odtwarza okno gdy zostalo zamkniete. Zwraca nowa widocznosc. */
+function toggleSpeakerWindow(): boolean {
+  if (!speakerWindow || speakerWindow.isDestroyed()) {
+    spawnSpeakerWindow();
+    return true;
+  }
+  if (speakerWindow.isVisible()) {
+    speakerWindow.hide();
+    return false;
+  }
+  // showInactive — nie kradnij fokusu operatorowi.
+  speakerWindow.showInactive();
+  return true;
 }
 
 app.whenReady().then(() => {
@@ -24,7 +44,10 @@ app.whenReady().then(() => {
   });
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => permission === 'media');
 
-  registerIpc(() => speakerWindow);
+  registerIpc({
+    getSpeakerWindow: () => speakerWindow,
+    toggleSpeakerWindow,
+  });
   createWindows();
 
   app.on('activate', () => {

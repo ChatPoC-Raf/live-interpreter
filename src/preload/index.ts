@@ -39,6 +39,7 @@ const api: LiveApi = {
     ipcRenderer.on(IPC.speakerStatus, listener);
     return () => ipcRenderer.removeListener(IPC.speakerStatus, listener);
   },
+  toggleSpeakerWindow: () => ipcRenderer.invoke(IPC.speakerToggleWindow),
 };
 
 contextBridge.exposeInMainWorld('live', api);

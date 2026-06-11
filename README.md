@@ -17,6 +17,9 @@ Anthropic) wpisywanych w ustawieniach aplikacji (szyfrowane przez `safeStorage`,
 ```bash
 npm install
 npm run dev        # dev server + oba okna (operator + wskaznik mowcy)
+                   # wskaznik mowcy otwiera sie w prawym dolnym rogu (always-on-top);
+                   # przycisk "Ukryj/Pokaz wskaznik mowcy" w topbarze operatora,
+                   # na evencie przeciagnij wskaznik na ekran skierowany do mowcy
 npm run test       # testy jednostkowe (vitest)
 npm run lint       # eslint
 npm run typecheck  # tsc --noEmit (main + renderer)

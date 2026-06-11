@@ -18,7 +18,13 @@ export interface IpcContext {
   artifacts: ArtifactsManager;
 }
 
-export function registerIpc(getSpeakerWindow: () => BrowserWindow | null): IpcContext {
+export interface SpeakerWindowControl {
+  getSpeakerWindow: () => BrowserWindow | null;
+  /** Pokaz/ukryj okno wskaznika; zwraca nowa widocznosc. */
+  toggleSpeakerWindow: () => boolean;
+}
+
+export function registerIpc(speaker: SpeakerWindowControl): IpcContext {
   const userData = app.getPath('userData');
   const settings = new SettingsStore(userData);
   const profiles = new ProfilesStore(userData);
@@ -58,11 +64,12 @@ export function registerIpc(getSpeakerWindow: () => BrowserWindow | null): IpcCo
   });
 
   ipcMain.handle(IPC.speakerSet, (_e, status: SpeakerStatusDto) => {
-    const win = getSpeakerWindow();
+    const win = speaker.getSpeakerWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send(IPC.speakerStatus, status);
     }
   });
+  ipcMain.handle(IPC.speakerToggleWindow, () => speaker.toggleSpeakerWindow());
 
   return { artifacts };
 }

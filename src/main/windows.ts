@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { BrowserWindow, shell } from 'electron';
+import { BrowserWindow, screen, shell } from 'electron';
 
 const preloadPath = join(__dirname, '../preload/index.js');
 
@@ -44,9 +44,18 @@ export function createOperatorWindow(): BrowserWindow {
 }
 
 export function createSpeakerWindow(): BrowserWindow {
+  // Wskaznik mowcy otwiera sie w prawym dolnym rogu ekranu (NIE na srodku),
+  // zeby na pojedynczym monitorze nie zaslaniac pulpitu operatora.
+  // Na evencie operator przeciaga go na drugi ekran skierowany do mowcy.
+  const SPEAKER_W = 560;
+  const SPEAKER_H = 360;
+  const MARGIN = 24;
+  const workArea = screen.getPrimaryDisplay().workArea;
   const win = new BrowserWindow({
-    width: 560,
-    height: 360,
+    width: SPEAKER_W,
+    height: SPEAKER_H,
+    x: workArea.x + workArea.width - SPEAKER_W - MARGIN,
+    y: workArea.y + workArea.height - SPEAKER_H - MARGIN,
     title: 'Live Interpreter — wskaznik mowcy',
     backgroundColor: '#10141a',
     alwaysOnTop: true,
@@ -57,7 +66,6 @@ export function createSpeakerWindow(): BrowserWindow {
       sandbox: false,
     },
   });
-  win.setAlwaysOnTop(true, 'screen-saver');
   load(win, 'speaker');
   return win;
 }

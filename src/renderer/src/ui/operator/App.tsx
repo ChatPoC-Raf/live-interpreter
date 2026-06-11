@@ -21,6 +21,7 @@ export function App(): ReactElement {
   const [dialog, setDialog] = useState<DialogId>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [recovered, setRecovered] = useState<string[]>([]);
+  const [speakerVisible, setSpeakerVisible] = useState(true);
 
   useEffect(() => {
     void window.live.getSettings().then(setSettings);
@@ -90,6 +91,14 @@ export function App(): ReactElement {
           Soundcheck
         </button>
         <button onClick={() => setDialog('spike')} disabled={inSession}>Spike</button>
+        <button
+          onClick={() => {
+            void window.live.toggleSpeakerWindow().then(setSpeakerVisible);
+          }}
+          title="Okno wskaznika dla mowcy — na evencie przeciagnij je na ekran skierowany do mowcy"
+        >
+          {speakerVisible ? 'Ukryj wskaznik mowcy' : 'Pokaz wskaznik mowcy'}
+        </button>
       </div>
 
       {(startError || recovered.length > 0) && (
